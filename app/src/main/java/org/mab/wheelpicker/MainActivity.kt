@@ -16,20 +16,26 @@ class MainActivity : AppCompatActivity() {
 
     private fun setWheelPicker() {
         val list = ArrayList<String>()
-        (0..24).forEach {
+        (1..24).forEach {
             list.add(it.toString())
         }
+
         circularWheelPicker_one.setDataSet(list)
         circularWheelPicker_one.setWheelItemSelectionListener(object : CircularWheelPicker.WheelItemSelectionListener {
-            override fun onItemSeleted(index: Int) {
-                Log.d(TAG, "Selected Item is : ${list[index]}")
+            override fun onItemSelected(index: Int) {
+                Log.d(TAG, "Selected position is : $index")
             }
         })
 
-        circularWheelPicker_two.setDataSet(list)
+        val list2 = ArrayList<String>()
+        (0..59).forEach {
+            list2.add(it.toString())
+        }
+
+        circularWheelPicker_two.setDataSet(list2)
         circularWheelPicker_two.setWheelItemSelectionListener(object : CircularWheelPicker.WheelItemSelectionListener {
-            override fun onItemSeleted(index: Int) {
-                Log.d(TAG, "Selected Item is : ${list[index]}")
+            override fun onItemSelected(index: Int) {
+                Log.d(TAG, "Selected position is : $index")
             }
         })
     }

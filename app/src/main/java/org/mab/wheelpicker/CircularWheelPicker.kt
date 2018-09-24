@@ -12,12 +12,13 @@ import android.view.*
 import android.view.animation.AccelerateInterpolator
 import android.widget.Scroller
 import android.widget.TextView
+import kotlin.math.abs
 
 
 class CircularWheelPicker : ConstraintLayout {
     companion object {
-        val LEFT = 0
-        val RIGHT = 1
+        const val LEFT = 0
+        const val RIGHT = 1
     }
 
 
@@ -34,6 +35,9 @@ class CircularWheelPicker : ConstraintLayout {
     private var isDataHasSet = false
     private var isChideDone = false
     private var viewType = LEFT
+    private var position = 0
+    private var selectionColor = Color.WHITE
+    private var normalColor = Color.GRAY
     private var wheelItemSelectionListener: WheelItemSelectionListener? = null
 
     /**
@@ -42,7 +46,7 @@ class CircularWheelPicker : ConstraintLayout {
     private val FLING_VELOCITY_DOWNSCALE = 6
 
 
-    private val wheel_layout by lazy {
+    private val wheelLayout by lazy {
         ConstraintLayout(context).apply {
             setBackgroundResource(R.drawable.circle_shape)
             id = View.generateViewId()
@@ -50,7 +54,7 @@ class CircularWheelPicker : ConstraintLayout {
     }
 
 
-    private val dummy_view by lazy {
+    private val dummyView by lazy {
         View(context).apply {
             id = View.generateViewId()
         }
@@ -95,37 +99,35 @@ class CircularWheelPicker : ConstraintLayout {
         } else {
             params.endToEnd = id
         }
-        wheel_layout.layoutParams = params
-        addView(wheel_layout)
+        wheelLayout.layoutParams = params
+        addView(wheelLayout)
     }
 
     private fun addDummyView() {
         val params = ConstraintLayout.LayoutParams(0, 0)
-        params.bottomToBottom = wheel_layout.id
-        params.topToTop = wheel_layout.id
-        params.startToStart = wheel_layout.id
-        params.endToEnd = wheel_layout.id
-        dummy_view.layoutParams = params
-        wheel_layout.addView(dummy_view)
+        params.bottomToBottom = wheelLayout.id
+        params.topToTop = wheelLayout.id
+        params.startToStart = wheelLayout.id
+        params.endToEnd = wheelLayout.id
+        dummyView.layoutParams = params
+        wheelLayout.addView(dummyView)
     }
 
     private fun configureWheel() {
-        Log.d(TAG, "call to setWheel")
-        wheel_layout.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+        wheelLayout.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
-                if (wheel_layout.measuredHeight > 1) {
-                    wheel_layout.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    val param = wheel_layout.layoutParams
-                    param.height = (wheel_layout.measuredHeight - wheel_layout.measuredHeight * 0.1).toInt()
-                    param.width = (wheel_layout.measuredHeight - wheel_layout.measuredHeight * 0.1).toInt()
-                    wheel_layout.layoutParams = param
+                if (wheelLayout.measuredHeight > 1) {
+                    wheelLayout.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    val param = wheelLayout.layoutParams
+                    param.height = (wheelLayout.measuredHeight - wheelLayout.measuredHeight * 0.1).toInt()
+                    param.width = (wheelLayout.measuredHeight - wheelLayout.measuredHeight * 0.1).toInt()
+                    wheelLayout.layoutParams = param
 
-                    val param2 = dummy_view.layoutParams as ConstraintLayout.LayoutParams
-                    param2.width = wheel_layout.measuredHeight
-                    param2.height = wheel_layout.measuredHeight
-                    dummy_view.layoutParams = param2
+                    val param2 = dummyView.layoutParams as ConstraintLayout.LayoutParams
+                    param2.width = wheelLayout.measuredHeight
+                    param2.height = wheelLayout.measuredHeight
+                    dummyView.layoutParams = param2
 
-                    Log.d(TAG, "Rendering done")
                     isChideDone = true
                     if (!isDataHasSet) {
                         setDataSet(itemList)
@@ -140,7 +142,7 @@ class CircularWheelPicker : ConstraintLayout {
 
     fun setViewType(viewType: Int) {
         if (viewType !in (1..2)) {
-            throw Exception("Invalid view type exception should be left or right")
+            throw Exception("Invalid view type exception, should be left or right")
         } else {
             this.viewType = viewType
         }
@@ -152,8 +154,7 @@ class CircularWheelPicker : ConstraintLayout {
             return
         else
             isDataHasSet = true
-        ROTAION_ANGLE_OFFSET = 360.0f / itemList.size
-        Log.d(TAG, "call to setDataSet")
+        ROTAION_ANGLE_OFFSET = if (viewType == LEFT) 360.0f / itemList.size else (360.0f / itemList.size) * -1
         itemList.forEachIndexed { index, value ->
             val textView = TextView(context).apply {
                 id = View.generateViewId()
@@ -163,16 +164,20 @@ class CircularWheelPicker : ConstraintLayout {
                 this@CircularWheelPicker.typeface?.let {
                     typeface = it
                 }
-                setTextColor(Color.WHITE)
+                if (index == 0)
+                    setTextColor(selectionColor)
+                else
+                    setTextColor(normalColor)
                 layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    circleConstraint = dummy_view.id
-                    circleRadius = (((dummy_view.measuredHeight / 2) - (dummy_view.measuredHeight / 2) * 0.2f).toInt())
-                    circleAngle = ((ROTAION_ANGLE_OFFSET * index) + 90f % 360f)
-                    Log.d(TAG, "Circle Radius : ${((dummy_view.measuredWidth / 2))}")
-                    Log.d(TAG, "Circle Angle : ${((ROTAION_ANGLE_OFFSET * index) + 90f % 360f)}")
+                    circleConstraint = dummyView.id
+                    circleRadius = (((dummyView.measuredHeight / 2) - (dummyView.measuredHeight / 2) * 0.2f).toInt())
+                    circleAngle = if (viewType == RIGHT)
+                        (((ROTAION_ANGLE_OFFSET * index) - 90f) % 360f)
+                    else
+                        (((ROTAION_ANGLE_OFFSET * index) + 90f) % 360f)
                 }
             }
-            wheel_layout.addView(textView)
+            wheelLayout.addView(textView)
         }
 
     }
@@ -195,14 +200,14 @@ class CircularWheelPicker : ConstraintLayout {
             throw IndexOutOfBoundsException()
         mPieRotation = 360 - (index * ROTAION_ANGLE_OFFSET)
 
-        ObjectAnimator.ofFloat(wheel_layout, "rotation", oldRotation, mPieRotation).apply {
+        ObjectAnimator.ofFloat(wheelLayout, "rotation", oldRotation, mPieRotation).apply {
             duration = 200
             interpolator = AccelerateInterpolator()
 
         }.start()
-        (0 until wheel_layout.childCount).forEach {
-            if (wheel_layout.getChildAt(it) is TextView) {
-                ObjectAnimator.ofFloat(wheel_layout.getChildAt(it), "rotation", 360 - mPieRotation).apply {
+        (0 until wheelLayout.childCount).forEach {
+            if (wheelLayout.getChildAt(it) is TextView) {
+                ObjectAnimator.ofFloat(wheelLayout.getChildAt(it), "rotation", 360 - mPieRotation).apply {
                     duration = 200
                     interpolator = AccelerateInterpolator()
 
@@ -216,38 +221,90 @@ class CircularWheelPicker : ConstraintLayout {
         this.typeface = typeface
     }
 
-    fun setTextSize(size: Float) {
-        this.textSize = textSize
+    fun setColor(normalColor: Int) {
+        this.normalColor = normalColor
+    }
+
+    fun setSelectionColor(selectionColor: Int) {
+        this.selectionColor = selectionColor
     }
 
     fun setWheelItemSelectionListener(wheelItemSelectionListener: WheelItemSelectionListener) {
         this.wheelItemSelectionListener = wheelItemSelectionListener
     }
 
+
     private fun onScrollFinished() {
+        Log.d(TAG, "Current Rotation Angle : $mPieRotation")
         val oldRotation = mPieRotation
-        val reminder = mPieRotation.toInt() % ROTAION_ANGLE_OFFSET.toInt()
-        if (reminder != 0) {
-            mPieRotation = if ((reminder.toFloat() + (mPieRotation - mPieRotation.toInt())) < (ROTAION_ANGLE_OFFSET / 2)) {
-                //go down
-                ROTAION_ANGLE_OFFSET * (mPieRotation.toInt() / ROTAION_ANGLE_OFFSET.toInt())
+        if (mPieRotation % ROTAION_ANGLE_OFFSET != 0.0f) {
+            val choice: String
+            val condition = abs(mPieRotation % ROTAION_ANGLE_OFFSET) < abs(ROTAION_ANGLE_OFFSET / 2f)
+            choice = if (viewType == LEFT) {
+                if (condition) {
+                    "L_UP"
+                } else {
+                    "L_DOWN"
+                }
             } else {
-                ROTAION_ANGLE_OFFSET * ((mPieRotation.toInt() / ROTAION_ANGLE_OFFSET.toInt()) + 1)
+                if (condition) {
+                    "R_DOWN"
+
+                } else {
+                    "R_UP"
+                }
             }
+            mPieRotation = getCorrectRotation(choice)
+
         }
-        wheel_layout.rotation = mPieRotation
-        ObjectAnimator.ofFloat(wheel_layout, "rotation", oldRotation, mPieRotation).apply {
+        wheelLayout.rotation = mPieRotation
+        ObjectAnimator.ofFloat(wheelLayout, "rotation", oldRotation, mPieRotation).apply {
             duration = 200
             interpolator = AccelerateInterpolator()
 
         }.start()
-        (0 until wheel_layout.childCount).forEach {
-            wheel_layout.getChildAt(it).rotation = 360 - mPieRotation
-        }
-        currentPosition = (((360 - mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
-        Log.d(TAG, "Angle Value : ${((360 - mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size}")
 
-        wheelItemSelectionListener?.onItemSeleted(currentPosition)
+        currentPosition = if (viewType == LEFT)
+            (((360 - mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
+        else
+            ((-(mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
+        if (currentPosition < 0)
+            currentPosition += itemList.size
+
+        position = currentPosition
+
+        (0 until wheelLayout.childCount).forEach {
+            wheelLayout.getChildAt(it).rotation = 360 - mPieRotation
+            val item = wheelLayout.getChildAt(it)
+            if (item is TextView)
+                if (item.text == "${itemList[position]}") {
+                    Log.d(TAG, " Changed Value : ${itemList[position]}")
+                    item.setTextColor(selectionColor)
+                    item.setTypeface(item.typeface, Typeface.BOLD)
+                } else {
+                    item.setTextColor(normalColor)
+                    item.setTypeface(item.typeface, Typeface.NORMAL)
+                }
+        }
+
+        wheelItemSelectionListener?.onItemSelected(currentPosition)
+    }
+
+    private fun getCorrectRotation(choice: String): Float {
+        return when (choice) {
+            "R_UP" -> {
+                ROTAION_ANGLE_OFFSET * ((mPieRotation.toInt() / ROTAION_ANGLE_OFFSET.toInt()) - 1)
+            }
+            "R_DOWN", "L_UP" -> {
+                ROTAION_ANGLE_OFFSET * (mPieRotation.toInt() / ROTAION_ANGLE_OFFSET.toInt())
+            }
+            "L_DOWN" -> {
+                ROTAION_ANGLE_OFFSET * ((mPieRotation.toInt() / ROTAION_ANGLE_OFFSET.toInt()) + 1)
+            }
+            else -> {
+                mPieRotation
+            }
+        }
     }
 
     private fun isAnimationRunning(): Boolean {
@@ -266,10 +323,39 @@ class CircularWheelPicker : ConstraintLayout {
     private fun setPieRotation(rotation: Float) {
         var rotation = rotation
         rotation = (rotation % 360 + 360) % 360
+
+        Log.d(TAG, "Call to setPieRotation : ${rotation % ROTAION_ANGLE_OFFSET}")
+        if (rotation.toInt() % ROTAION_ANGLE_OFFSET.toInt() == 0) {
+            Log.d(TAG, "Old Position $position")
+            val isIncrement = mPieRotation > rotation
+            position = if (viewType == LEFT)
+                (((360 - mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
+            else
+                ((-(mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
+            position = if (isIncrement) {
+                (position + 1) % itemList.size
+            } else {
+//                (position - 1) % itemList.size
+                position
+            }
+            if (position < 0)
+                position += itemList.size
+            Log.d(TAG, "New Position $position")
+        }
         mPieRotation = rotation
-        wheel_layout.rotation = rotation
-        (0 until wheel_layout.childCount).forEach {
-            wheel_layout.getChildAt(it).rotation = 360 - rotation
+        wheelLayout.rotation = rotation
+        (0 until wheelLayout.childCount).forEach {
+            wheelLayout.getChildAt(it).rotation = 360 - rotation
+            val item = wheelLayout.getChildAt(it)
+            if (item is TextView)
+                if (item.text == "${itemList[position]}") {
+                    Log.d(TAG, " Changed Value : ${itemList[position]}")
+                    item.setTextColor(selectionColor)
+                    item.setTypeface(item.typeface, Typeface.BOLD)
+                } else {
+                    item.setTextColor(normalColor)
+                    item.setTypeface(item.typeface, Typeface.NORMAL)
+                }
         }
     }
 
@@ -322,8 +408,8 @@ class CircularWheelPicker : ConstraintLayout {
             val scrollToRotate = vectorToScalarScroll(
                     distanceX,
                     distanceY,
-                    e2.x - (wheel_layout.width / 2 + wheel_layout.left),
-                    e2.y - (wheel_layout.height / 2 + wheel_layout.top))
+                    e2.x - (wheelLayout.width / 2 + wheelLayout.left),
+                    e2.y - (wheelLayout.height / 2 + wheelLayout.top))
 
             setPieRotation(getPieRotation() - scrollToRotate / FLING_VELOCITY_DOWNSCALE)
             return true
@@ -334,8 +420,8 @@ class CircularWheelPicker : ConstraintLayout {
             val scrollToRotate = vectorToScalarScroll(
                     velocityX,
                     velocityY,
-                    e2.x - (wheel_layout.width / 2 + wheel_layout.left),
-                    e2.y - (wheel_layout.height / 2 + wheel_layout.top))
+                    e2.x - (wheelLayout.width / 2 + wheelLayout.left),
+                    e2.y - (wheelLayout.height / 2 + wheelLayout.top))
 
             mScroller?.fling(
                     0,
@@ -361,8 +447,8 @@ class CircularWheelPicker : ConstraintLayout {
     }
 
     interface WheelItemSelectionListener {
-        fun onItemSeleted(index: Int)
+        fun onItemSelected(index: Int)
     }
 
-
 }
+
