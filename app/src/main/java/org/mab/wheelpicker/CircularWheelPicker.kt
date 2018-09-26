@@ -1,17 +1,23 @@
 package org.mab.wheelpicker
 
+import android.animation.Animator
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.support.constraint.ConstraintLayout
+import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.Log
 import android.view.*
 import android.view.animation.AccelerateInterpolator
 import android.widget.Scroller
 import android.widget.TextView
+import dpToPx
+import zoomIn
+import zoomOut
 import kotlin.math.abs
 
 
@@ -39,6 +45,8 @@ class CircularWheelPicker : ConstraintLayout {
     private var selectionColor = Color.WHITE
     private var normalColor = Color.GRAY
     private var wheelItemSelectionListener: WheelItemSelectionListener? = null
+
+    private val DEFAULT_IN_BETWEEN_SPACE = dpToPx(80)
 
     /**
      * The initial fling velocity is divided by this amount.
@@ -161,13 +169,11 @@ class CircularWheelPicker : ConstraintLayout {
                 text = value
                 //textSize should be some percentage
                 textSize = this@CircularWheelPicker.textSize
-                this@CircularWheelPicker.typeface?.let {
+                typeface = this@CircularWheelPicker.typeface
+                /*this@CircularWheelPicker.typeface?.let {
                     typeface = it
-                }
-                if (index == 0)
-                    setTextColor(selectionColor)
-                else
-                    setTextColor(normalColor)
+                }*/
+                setTextColor(normalColor)
                 layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     circleConstraint = dummyView.id
                     circleRadius = (((dummyView.measuredHeight / 2) - (dummyView.measuredHeight / 2) * 0.2f).toInt())
@@ -175,15 +181,20 @@ class CircularWheelPicker : ConstraintLayout {
                         (((ROTAION_ANGLE_OFFSET * index) - 90f) % 360f)
                     else
                         (((ROTAION_ANGLE_OFFSET * index) + 90f) % 360f)
+                    rotation = circleAngle
                 }
             }
             wheelLayout.addView(textView)
+            if (index == 0)
+                textView.zoomIn(onAnimationStart = {
+                    textView.setTextColor(selectionColor)
+                }, duration = 200)
         }
 
     }
 
     fun getCurrentPosition(): Int {
-        return (((360 - mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
+        return currentPosition
     }
 
     fun getCurrentItem(): String {
@@ -193,28 +204,11 @@ class CircularWheelPicker : ConstraintLayout {
     fun setCurrentPosition(index: Int) {
         if (index == currentPosition)
             return
-        val oldRotation = mPieRotation
-        Log.d(TAG, "Current Position : $currentPosition")
-        Log.d(TAG, "Current Angle : $currentPosition")
         if (index > itemList.lastIndex)
             throw IndexOutOfBoundsException()
         mPieRotation = 360 - (index * ROTAION_ANGLE_OFFSET)
+        onScrollFinished(200)
 
-        ObjectAnimator.ofFloat(wheelLayout, "rotation", oldRotation, mPieRotation).apply {
-            duration = 200
-            interpolator = AccelerateInterpolator()
-
-        }.start()
-        (0 until wheelLayout.childCount).forEach {
-            if (wheelLayout.getChildAt(it) is TextView) {
-                ObjectAnimator.ofFloat(wheelLayout.getChildAt(it), "rotation", 360 - mPieRotation).apply {
-                    duration = 200
-                    interpolator = AccelerateInterpolator()
-
-                }.start()
-            }
-        }
-        currentPosition = index
     }
 
     fun setFont(typeface: Typeface) {
@@ -233,8 +227,30 @@ class CircularWheelPicker : ConstraintLayout {
         this.wheelItemSelectionListener = wheelItemSelectionListener
     }
 
+    private fun getBiggestTextWidth(): Int {
+        val text = getBiggestElement(itemList)
+        Log.d(TAG, "Biggest Text : $text")
+        val textPaint = TextPaint()
+        textPaint.textSize = textSize
+        textPaint.typeface = typeface
+        textPaint.color = normalColor
+        val bounds = Rect()
+        textPaint.getTextBounds(text, 0, text.length, bounds)
+        Log.d(TAG, "Bounds Width : ${bounds.width()} Measure Width : ${textPaint.measureText(text)}")
+        return bounds.width()
+    }
 
-    private fun onScrollFinished() {
+    private fun getBiggestElement(arrayList: ArrayList<String>): String {
+        var bigSting = arrayList[0]
+        (0 until arrayList.size).forEach {
+            if (bigSting.length < arrayList[it].length)
+                bigSting = arrayList[it]
+        }
+        return bigSting
+    }
+
+
+    private fun onScrollFinished(animationDuration: Long = 100) {
         Log.d(TAG, "Current Rotation Angle : $mPieRotation")
         val oldRotation = mPieRotation
         if (mPieRotation % ROTAION_ANGLE_OFFSET != 0.0f) {
@@ -259,35 +275,44 @@ class CircularWheelPicker : ConstraintLayout {
         }
         wheelLayout.rotation = mPieRotation
         ObjectAnimator.ofFloat(wheelLayout, "rotation", oldRotation, mPieRotation).apply {
-            duration = 200
+            duration = animationDuration
             interpolator = AccelerateInterpolator()
+            addListener(object : Animator.AnimatorListener {
+                override fun onAnimationEnd(animation: Animator?) {
+                    val oldItem = wheelLayout.getChildAt(currentPosition + 1) as TextView
+                    oldItem.zoomOut(onAnimationStart = {
+                        oldItem.setTextColor(normalColor)
+                    }, duration = 200)
+                    currentPosition = getCorrectPosition()
+
+                    position = currentPosition
+
+                    val newItem = wheelLayout.getChildAt(currentPosition + 1) as TextView
+                    newItem.zoomIn(onAnimationStart = {
+                        newItem.setTextColor(selectionColor)
+                    }, duration = 200)
+                    wheelItemSelectionListener?.onItemSelected(currentPosition)
+                }
+
+                override fun onAnimationRepeat(animation: Animator?) {}
+                override fun onAnimationCancel(animation: Animator?) {}
+                override fun onAnimationStart(animation: Animator?) {}
+
+            })
 
         }.start()
 
-        currentPosition = if (viewType == LEFT)
+        Log.d(TAG, "Biggest Elenent is : ${getBiggestTextWidth()}")
+    }
+
+    private fun getCorrectPosition(): Int {
+        var position = if (viewType == LEFT)
             (((360 - mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
         else
             ((-(mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
-        if (currentPosition < 0)
-            currentPosition += itemList.size
-
-        position = currentPosition
-
-        (0 until wheelLayout.childCount).forEach {
-            wheelLayout.getChildAt(it).rotation = 360 - mPieRotation
-            val item = wheelLayout.getChildAt(it)
-            if (item is TextView)
-                if (item.text == "${itemList[position]}") {
-                    Log.d(TAG, " Changed Value : ${itemList[position]}")
-                    item.setTextColor(selectionColor)
-                    item.setTypeface(item.typeface, Typeface.BOLD)
-                } else {
-                    item.setTextColor(normalColor)
-                    item.setTypeface(item.typeface, Typeface.NORMAL)
-                }
-        }
-
-        wheelItemSelectionListener?.onItemSelected(currentPosition)
+        if (position < 0)
+            position += itemList.size
+        return position
     }
 
     private fun getCorrectRotation(choice: String): Float {
@@ -335,7 +360,6 @@ class CircularWheelPicker : ConstraintLayout {
             position = if (isIncrement) {
                 (position + 1) % itemList.size
             } else {
-//                (position - 1) % itemList.size
                 position
             }
             if (position < 0)
@@ -344,19 +368,6 @@ class CircularWheelPicker : ConstraintLayout {
         }
         mPieRotation = rotation
         wheelLayout.rotation = rotation
-        (0 until wheelLayout.childCount).forEach {
-            wheelLayout.getChildAt(it).rotation = 360 - rotation
-            val item = wheelLayout.getChildAt(it)
-            if (item is TextView)
-                if (item.text == "${itemList[position]}") {
-                    Log.d(TAG, " Changed Value : ${itemList[position]}")
-                    item.setTextColor(selectionColor)
-                    item.setTypeface(item.typeface, Typeface.BOLD)
-                } else {
-                    item.setTextColor(normalColor)
-                    item.setTypeface(item.typeface, Typeface.NORMAL)
-                }
-        }
     }
 
 
