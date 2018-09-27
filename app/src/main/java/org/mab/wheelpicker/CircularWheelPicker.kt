@@ -3,6 +3,7 @@ package org.mab.wheelpicker
 import android.animation.Animator
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.app.Activity
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Rect
@@ -10,15 +11,17 @@ import android.graphics.Typeface
 import android.support.constraint.ConstraintLayout
 import android.text.TextPaint
 import android.util.AttributeSet
+import android.util.DisplayMetrics
 import android.util.Log
 import android.view.*
 import android.view.animation.AccelerateInterpolator
 import android.widget.Scroller
 import android.widget.TextView
-import dpToPx
 import zoomIn
 import zoomOut
 import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.sqrt
 
 
 class CircularWheelPicker : ConstraintLayout {
@@ -46,12 +49,16 @@ class CircularWheelPicker : ConstraintLayout {
     private var normalColor = Color.GRAY
     private var wheelItemSelectionListener: WheelItemSelectionListener? = null
 
-    private val DEFAULT_IN_BETWEEN_SPACE = dpToPx(80)
+    private var DEFAULT_IN_BETWEEN_SPACE = 0
+    private var maxElementsCount = 0
+    private var runTimeWidth = 0
+    private var centerChildIndex = 0
+    private var lastIdlePosition = 0
 
     /**
      * The initial fling velocity is divided by this amount.
      */
-    private val FLING_VELOCITY_DOWNSCALE = 6
+    private val FLING_VELOCITY_DOWNSCALE = 15
 
 
     private val wheelLayout by lazy {
@@ -66,6 +73,13 @@ class CircularWheelPicker : ConstraintLayout {
         View(context).apply {
             id = View.generateViewId()
         }
+    }
+
+    private val displayMetrics by lazy {
+        DisplayMetrics().apply {
+            (context as Activity).windowManager.defaultDisplay.getMetrics(this)
+        }
+
     }
 
     constructor(context: Context) : super(context) {
@@ -127,14 +141,16 @@ class CircularWheelPicker : ConstraintLayout {
                 if (wheelLayout.measuredHeight > 1) {
                     wheelLayout.viewTreeObserver.removeOnGlobalLayoutListener(this)
                     val param = wheelLayout.layoutParams
-                    param.height = (wheelLayout.measuredHeight - wheelLayout.measuredHeight * 0.1).toInt()
-                    param.width = (wheelLayout.measuredHeight - wheelLayout.measuredHeight * 0.1).toInt()
+                    runTimeWidth = (wheelLayout.measuredHeight * 0.9).toInt()
+                    param.height = runTimeWidth
+                    param.width = runTimeWidth
                     wheelLayout.layoutParams = param
 
                     val param2 = dummyView.layoutParams as ConstraintLayout.LayoutParams
-                    param2.width = wheelLayout.measuredHeight
-                    param2.height = wheelLayout.measuredHeight
+                    param2.width = runTimeWidth
+                    param2.height = runTimeWidth
                     dummyView.layoutParams = param2
+                    DEFAULT_IN_BETWEEN_SPACE = (param.width * 0.15f).toInt()
 
                     isChideDone = true
                     if (!isDataHasSet) {
@@ -146,6 +162,14 @@ class CircularWheelPicker : ConstraintLayout {
         })
 
 
+    }
+
+    private fun configureWheelElements() {
+        maxElementsCount = min(((runTimeWidth / getBiggestTextSize()) * 4).toInt(), itemList.size)
+        if (maxElementsCount % 2 != 0)
+            maxElementsCount--
+        centerChildIndex = maxElementsCount / 2
+        ROTAION_ANGLE_OFFSET = if (viewType == LEFT) 360.0f / maxElementsCount.toFloat() else (360.0f / maxElementsCount.toFloat()) * -1f
     }
 
     fun setViewType(viewType: Int) {
@@ -162,17 +186,15 @@ class CircularWheelPicker : ConstraintLayout {
             return
         else
             isDataHasSet = true
-        ROTAION_ANGLE_OFFSET = if (viewType == LEFT) 360.0f / itemList.size else (360.0f / itemList.size) * -1
-        itemList.forEachIndexed { index, value ->
+
+        configureWheelElements()
+
+        /*itemList.forEachIndexed { index, value ->
             val textView = TextView(context).apply {
                 id = View.generateViewId()
                 text = value
-                //textSize should be some percentage
                 textSize = this@CircularWheelPicker.textSize
                 typeface = this@CircularWheelPicker.typeface
-                /*this@CircularWheelPicker.typeface?.let {
-                    typeface = it
-                }*/
                 setTextColor(normalColor)
                 layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     circleConstraint = dummyView.id
@@ -189,6 +211,52 @@ class CircularWheelPicker : ConstraintLayout {
                 textView.zoomIn(onAnimationStart = {
                     textView.setTextColor(selectionColor)
                 }, duration = 200)
+        }*/
+        var multiplier = 0
+        (0 until maxElementsCount / 2).forEach {
+            val textView = TextView(context).apply {
+                id = View.generateViewId()
+                text = itemList[it]
+                textSize = this@CircularWheelPicker.textSize
+                typeface = this@CircularWheelPicker.typeface
+                setTextColor(normalColor)
+                layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    circleConstraint = dummyView.id
+                    circleRadius = (((dummyView.measuredHeight / 2) - (dummyView.measuredHeight / 2) * 0.2f).toInt())
+                    circleAngle = if (viewType == RIGHT)
+                        (((ROTAION_ANGLE_OFFSET * multiplier) - 90f) % 360f)
+                    else
+                        (((ROTAION_ANGLE_OFFSET * multiplier) + 90f) % 360f)
+                    rotation = circleAngle
+                }
+            }
+            wheelLayout.addView(textView)
+            if (it == 0)
+                textView.zoomIn(onAnimationStart = {
+                    textView.setTextColor(selectionColor)
+                }, duration = 200)
+            multiplier++
+        }
+
+        (itemList.size - (maxElementsCount / 2) until itemList.size).forEach {
+            val textView = TextView(context).apply {
+                id = View.generateViewId()
+                text = itemList[it]
+                textSize = this@CircularWheelPicker.textSize
+                typeface = this@CircularWheelPicker.typeface
+                setTextColor(normalColor)
+                layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    circleConstraint = dummyView.id
+                    circleRadius = (((dummyView.measuredHeight / 2) - (dummyView.measuredHeight / 2) * 0.2f).toInt())
+                    circleAngle = if (viewType == RIGHT)
+                        (((ROTAION_ANGLE_OFFSET * multiplier) - 90f) % 360f)
+                    else
+                        (((ROTAION_ANGLE_OFFSET * multiplier) + 90f) % 360f)
+                    rotation = circleAngle
+                }
+            }
+            wheelLayout.addView(textView)
+            multiplier++
         }
 
     }
@@ -279,7 +347,7 @@ class CircularWheelPicker : ConstraintLayout {
             interpolator = AccelerateInterpolator()
             addListener(object : Animator.AnimatorListener {
                 override fun onAnimationEnd(animation: Animator?) {
-                    val oldItem = wheelLayout.getChildAt(currentPosition + 1) as TextView
+                    val oldItem = getChildOfWheelByIndex(currentPosition)
                     oldItem.zoomOut(onAnimationStart = {
                         oldItem.setTextColor(normalColor)
                     }, duration = 200)
@@ -287,7 +355,7 @@ class CircularWheelPicker : ConstraintLayout {
 
                     position = currentPosition
 
-                    val newItem = wheelLayout.getChildAt(currentPosition + 1) as TextView
+                    val newItem = getChildOfWheelByIndex(currentPosition)
                     newItem.zoomIn(onAnimationStart = {
                         newItem.setTextColor(selectionColor)
                     }, duration = 200)
@@ -301,17 +369,17 @@ class CircularWheelPicker : ConstraintLayout {
             })
 
         }.start()
-
-        Log.d(TAG, "Biggest Elenent is : ${getBiggestTextWidth()}")
+        centerChildIndex = (currentPosition + (maxElementsCount / 2)) % maxElementsCount
     }
 
+    //Changed
     private fun getCorrectPosition(): Int {
         var position = if (viewType == LEFT)
-            (((360 - mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
+            (((360 - mPieRotation) / ROTAION_ANGLE_OFFSET) % maxElementsCount).toInt()
         else
-            ((-(mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
+            ((-(mPieRotation) / ROTAION_ANGLE_OFFSET) % maxElementsCount).toInt()
         if (position < 0)
-            position += itemList.size
+            position += maxElementsCount
         return position
     }
 
@@ -346,28 +414,94 @@ class CircularWheelPicker : ConstraintLayout {
 
 
     private fun setPieRotation(rotation: Float) {
+//
         var rotation = rotation
         rotation = (rotation % 360 + 360) % 360
-
-        Log.d(TAG, "Call to setPieRotation : ${rotation % ROTAION_ANGLE_OFFSET}")
-        if (rotation.toInt() % ROTAION_ANGLE_OFFSET.toInt() == 0) {
-            Log.d(TAG, "Old Position $position")
-            val isIncrement = mPieRotation > rotation
-            position = if (viewType == LEFT)
-                (((360 - mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
-            else
-                ((-(mPieRotation) / ROTAION_ANGLE_OFFSET) % itemList.size).toInt()
-            position = if (isIncrement) {
-                (position + 1) % itemList.size
-            } else {
-                position
-            }
-            if (position < 0)
-                position += itemList.size
-            Log.d(TAG, "New Position $position")
-        }
         mPieRotation = rotation
         wheelLayout.rotation = rotation
+        val positionIndex = getCorrectPosition()
+        /*if(lastIdlePosition)
+        if (lastIdlePosition < positionIndex) {
+        } else if (lastIdlePosition > currentPosition) {
+
+        }*/
+        val gap = abs(lastIdlePosition - positionIndex)
+        if (gap < 3 && maxElementsCount != itemList.size) {
+            if (lastIdlePosition < positionIndex) {
+                reArrangeElements(gap, "UP")
+            } else if (lastIdlePosition > positionIndex) {
+                reArrangeElements(gap, "DOWN")
+            }
+        }
+//        Log.d(TAG, "getCorrectPosition ${positionIndex}")
+        lastIdlePosition = positionIndex
+    }
+
+    private fun reArrangeElements(gap: Int, side: String) {
+        Log.d(TAG, "###$side")
+        when (side) {
+            "UP" -> {
+                var start = centerChildIndex - 1
+                //First Child of other end
+                val item = getChildOfWheelByIndex(start)
+                //Last Child value of start
+                var startValueIndex = (itemList.indexOf(item.text) + 1) % itemList.size
+                (0 until gap).forEach {
+                    var viewIndex = (start + 1) % maxElementsCount
+                    val child = getChildOfWheelByIndex(viewIndex)
+                    child.text = itemList[startValueIndex]
+                    start = (start + 1) % maxElementsCount
+                    startValueIndex = (startValueIndex + 1) % itemList.size
+                }
+                centerChildIndex = start
+            }
+            "DOWN" -> {
+                var start = centerChildIndex - 1
+                /*if(start==0)
+                    start++*/
+                val item = wheelLayout.getChildAt(start + 1) as TextView
+                var startValueIndex = itemList.indexOf(item.text) - 1
+                (0 until gap).forEach {
+                    var viewIndex = (start + 1) % wheelLayout.childCount
+                    if (viewIndex == 0)
+                        viewIndex++
+                    val child = wheelLayout.getChildAt(viewIndex) as TextView
+                    child.text = itemList[startValueIndex]
+                    start = (start - 1) % maxElementsCount
+                    if (start < 0)
+                        start += maxElementsCount
+                    startValueIndex = (startValueIndex - 1) % itemList.size
+                    if (startValueIndex < 0)
+                        startValueIndex += itemList.size
+                }
+                centerChildIndex = start
+            }
+        }
+    }
+
+    private fun getChildOfWheelByIndex(index: Int): TextView {
+        if (index >= wheelLayout.childCount - 1)
+            throw ArrayIndexOutOfBoundsException()
+        return wheelLayout.getChildAt(index + 1) as TextView
+    }
+
+    private fun rearrangeElements(startPosition: Int) {
+
+
+        /*var i = startPosition
+        (0 until maxElementsCount / 2).forEach {
+            val item = wheelLayout.getChildAt(it + 1) as TextView
+            item.text = (itemList[i])
+            i = (i + 1) % itemList.size
+        }
+        i = startPosition
+        (maxElementsCount..maxElementsCount / 2).forEach {
+            val item = wheelLayout.getChildAt(it) as TextView
+            i -= 1
+            if (i < 0)
+                i += itemList.size
+            item.text = (itemList[i])
+        }*/
     }
 
 
@@ -459,6 +593,23 @@ class CircularWheelPicker : ConstraintLayout {
 
     interface WheelItemSelectionListener {
         fun onItemSelected(index: Int)
+    }
+
+
+    private fun getBiggestTextSize(): Float {
+        val size = getTextViewSize(context, getBiggestElement(itemList), textSize, width, typeface)
+        return sqrt((size.first * size.first + size.second * size.second).toFloat()) + DEFAULT_IN_BETWEEN_SPACE
+    }
+
+    private fun getTextViewSize(context: Context, text: CharSequence, textSize: Float, deviceWidth: Int, typeface: Typeface?): Pair<Int, Int> {
+        val textView = TextView(context)
+        textView.typeface = typeface
+        textView.setText(text, TextView.BufferType.SPANNABLE)
+        textView.textSize = textSize
+        val widthMeasureSpec = View.MeasureSpec.makeMeasureSpec(deviceWidth, View.MeasureSpec.AT_MOST)
+        val heightMeasureSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        textView.measure(widthMeasureSpec, heightMeasureSpec)
+        return Pair(textView.measuredWidth, textView.measuredHeight)
     }
 
 }

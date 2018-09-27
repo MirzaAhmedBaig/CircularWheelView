@@ -18,31 +18,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun setWheelPicker() {
         val list = ArrayList<String>()
-        /*(0..20).forEach {
-            list.add("Mirza Ahmed")
-        }*/
-        list.add("mirza")
-        list.add("mirza ahmed")
-        list.add("mirza ahmed baig")
-        list.add("mirza ahmed baig")
-        list.add("mirza mi")
-        list.add("mirza ")
-        list.add("mirza jsf")
-        list.add("mirza")
-        list.add("mirza ahmed")
-        list.add("mirza ahmed baig")
-        list.add("mirza ahmed baig")
-        list.add("mirza mi")
-        list.add("mirza ")
-        list.add("mirza jsf")
-        list.add("mirza")
-        list.add("mirza ahmed")
-        list.add("mirza ahmed baig")
-        list.add("mirza ahmed baig")
-        list.add("mirza mi")
-        list.add("mirza ")
-        list.add("mirza jsf")
-
+        (0..20).forEach {
+            list.add("$it")
+        }
         circularWheelPicker_one.setDataSet(list)
         circularWheelPicker_one.setWheelItemSelectionListener(object : CircularWheelPicker.WheelItemSelectionListener {
             override fun onItemSelected(index: Int) {
