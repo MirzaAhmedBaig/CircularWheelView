@@ -18,7 +18,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setWheelPicker() {
         val list = ArrayList<String>()
-        (0..20).forEach {
+        (0..59).forEach {
             list.add("$it")
         }
         circularWheelPicker_one.setDataSet(list)

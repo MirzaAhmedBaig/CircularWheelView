@@ -6,10 +6,8 @@ import android.animation.ValueAnimator
 import android.app.Activity
 import android.content.Context
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.Typeface
 import android.support.constraint.ConstraintLayout
-import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.DisplayMetrics
 import android.util.Log
@@ -52,7 +50,6 @@ class CircularWheelPicker : ConstraintLayout {
     private var DEFAULT_IN_BETWEEN_SPACE = 0
     private var maxElementsCount = 0
     private var runTimeWidth = 0
-    private var centerChildIndex = 0
     private var lastIdlePosition = 0
 
     /**
@@ -168,7 +165,7 @@ class CircularWheelPicker : ConstraintLayout {
         maxElementsCount = min(((runTimeWidth / getBiggestTextSize()) * 4).toInt(), itemList.size)
         if (maxElementsCount % 2 != 0)
             maxElementsCount--
-        centerChildIndex = maxElementsCount / 2
+        Log.d(TAG, "Max Element Count : $maxElementsCount")
         ROTAION_ANGLE_OFFSET = if (viewType == LEFT) 360.0f / maxElementsCount.toFloat() else (360.0f / maxElementsCount.toFloat()) * -1f
     }
 
@@ -295,18 +292,6 @@ class CircularWheelPicker : ConstraintLayout {
         this.wheelItemSelectionListener = wheelItemSelectionListener
     }
 
-    private fun getBiggestTextWidth(): Int {
-        val text = getBiggestElement(itemList)
-        Log.d(TAG, "Biggest Text : $text")
-        val textPaint = TextPaint()
-        textPaint.textSize = textSize
-        textPaint.typeface = typeface
-        textPaint.color = normalColor
-        val bounds = Rect()
-        textPaint.getTextBounds(text, 0, text.length, bounds)
-        Log.d(TAG, "Bounds Width : ${bounds.width()} Measure Width : ${textPaint.measureText(text)}")
-        return bounds.width()
-    }
 
     private fun getBiggestElement(arrayList: ArrayList<String>): String {
         var bigSting = arrayList[0]
@@ -360,6 +345,8 @@ class CircularWheelPicker : ConstraintLayout {
                         newItem.setTextColor(selectionColor)
                     }, duration = 200)
                     wheelItemSelectionListener?.onItemSelected(currentPosition)
+                    lastIdlePosition = currentPosition
+                    reArrangeWheel()
                 }
 
                 override fun onAnimationRepeat(animation: Animator?) {}
@@ -369,7 +356,21 @@ class CircularWheelPicker : ConstraintLayout {
             })
 
         }.start()
-        centerChildIndex = (currentPosition + (maxElementsCount / 2)) % maxElementsCount
+    }
+
+    private fun getNextPositionFor(index: Int, size: Int): Int {
+        return (index + 1) % size
+    }
+
+    private fun getPreviousPositionFor(index: Int, size: Int): Int {
+        var previous = (index - 1) % size
+        if (previous < 0)
+            previous += size
+        return previous
+    }
+
+    private fun roundToCorrectIndex(index: Int, size: Int): Int {
+        return index % size
     }
 
     //Changed
@@ -414,17 +415,12 @@ class CircularWheelPicker : ConstraintLayout {
 
 
     private fun setPieRotation(rotation: Float) {
-//
         var rotation = rotation
         rotation = (rotation % 360 + 360) % 360
         mPieRotation = rotation
         wheelLayout.rotation = rotation
         val positionIndex = getCorrectPosition()
-        /*if(lastIdlePosition)
-        if (lastIdlePosition < positionIndex) {
-        } else if (lastIdlePosition > currentPosition) {
 
-        }*/
         val gap = abs(lastIdlePosition - positionIndex)
         if (gap < 3 && maxElementsCount != itemList.size) {
             if (lastIdlePosition < positionIndex) {
@@ -433,49 +429,51 @@ class CircularWheelPicker : ConstraintLayout {
                 reArrangeElements(gap, "DOWN")
             }
         }
-//        Log.d(TAG, "getCorrectPosition ${positionIndex}")
         lastIdlePosition = positionIndex
     }
 
     private fun reArrangeElements(gap: Int, side: String) {
-        Log.d(TAG, "###$side")
+        Log.d(TAG, "##$side Gap : $gap")
         when (side) {
             "UP" -> {
-                var start = centerChildIndex - 1
-                //First Child of other end
-                val item = getChildOfWheelByIndex(start)
-                //Last Child value of start
-                var startValueIndex = (itemList.indexOf(item.text) + 1) % itemList.size
-                (0 until gap).forEach {
-                    var viewIndex = (start + 1) % maxElementsCount
-                    val child = getChildOfWheelByIndex(viewIndex)
-                    child.text = itemList[startValueIndex]
-                    start = (start + 1) % maxElementsCount
-                    startValueIndex = (startValueIndex + 1) % itemList.size
-                }
-                centerChildIndex = start
+                if (viewType == LEFT)
+                    performUpScrollingTask(gap)
+                else
+                    performDownScrollingTask(gap)
             }
             "DOWN" -> {
-                var start = centerChildIndex - 1
-                /*if(start==0)
-                    start++*/
-                val item = wheelLayout.getChildAt(start + 1) as TextView
-                var startValueIndex = itemList.indexOf(item.text) - 1
-                (0 until gap).forEach {
-                    var viewIndex = (start + 1) % wheelLayout.childCount
-                    if (viewIndex == 0)
-                        viewIndex++
-                    val child = wheelLayout.getChildAt(viewIndex) as TextView
-                    child.text = itemList[startValueIndex]
-                    start = (start - 1) % maxElementsCount
-                    if (start < 0)
-                        start += maxElementsCount
-                    startValueIndex = (startValueIndex - 1) % itemList.size
-                    if (startValueIndex < 0)
-                        startValueIndex += itemList.size
-                }
-                centerChildIndex = start
+                if (viewType == LEFT)
+                    performDownScrollingTask(gap)
+                else
+                    performUpScrollingTask(gap)
             }
+        }
+    }
+
+
+    private fun performUpScrollingTask(gap: Int) {
+        var start = roundToCorrectIndex(lastIdlePosition + (maxElementsCount / 2) - gap, maxElementsCount)
+        val item = getChildOfWheelByIndex(start)
+        var startValueIndex = getNextPositionFor(itemList.indexOf(item.text.toString()), itemList.size)
+        Log.d(TAG, "##Start : $start , Item Text = ${item.text} , Next Value Index : $startValueIndex")
+        (0 until gap).forEach {
+            start = getNextPositionFor(start, maxElementsCount)
+            getChildOfWheelByIndex(start).text = itemList[startValueIndex]
+            startValueIndex = getNextPositionFor(startValueIndex, itemList.size)
+        }
+    }
+
+    private fun performDownScrollingTask(gap: Int) {
+        var start = roundToCorrectIndex(lastIdlePosition - (maxElementsCount / 2) + gap, maxElementsCount)
+        if (start < 0)
+            start += maxElementsCount
+        val item = getChildOfWheelByIndex(start)
+        var startValueIndex = getNextPositionFor(itemList.indexOf(item.text.toString()), itemList.size)
+        Log.d(TAG, "##Start : $start , Item Text = ${item.text} , Next Value Index : $startValueIndex")
+        (0 until gap).forEach {
+            start = getPreviousPositionFor(start, maxElementsCount)
+            getChildOfWheelByIndex(start).text = itemList[startValueIndex]
+            startValueIndex = getPreviousPositionFor(startValueIndex, itemList.size)
         }
     }
 
@@ -485,23 +483,24 @@ class CircularWheelPicker : ConstraintLayout {
         return wheelLayout.getChildAt(index + 1) as TextView
     }
 
-    private fun rearrangeElements(startPosition: Int) {
+    private fun reArrangeWheel() {
+        Log.d(TAG, "reArrangeWheel : $currentPosition")
 
+        var startIndex = itemList.indexOf(getChildOfWheelByIndex(currentPosition).text.toString())
+        var startElementIndex = currentPosition
+        var endElementIndex = (currentPosition + maxElementsCount - 1) % maxElementsCount
+        var endIndex = itemList.indexOf(getChildOfWheelByIndex(endElementIndex).text.toString())
 
-        /*var i = startPosition
-        (0 until maxElementsCount / 2).forEach {
-            val item = wheelLayout.getChildAt(it + 1) as TextView
-            item.text = (itemList[i])
-            i = (i + 1) % itemList.size
+        (0 until (maxElementsCount / 2) - 1).forEach {
+            getChildOfWheelByIndex(startElementIndex).text = itemList[startIndex % itemList.size]
+            startIndex = getNextPositionFor(startIndex, itemList.size)
+            startElementIndex = getNextPositionFor(startElementIndex, maxElementsCount)
         }
-        i = startPosition
-        (maxElementsCount..maxElementsCount / 2).forEach {
-            val item = wheelLayout.getChildAt(it) as TextView
-            i -= 1
-            if (i < 0)
-                i += itemList.size
-            item.text = (itemList[i])
-        }*/
+        (0 until (maxElementsCount / 2) - 1).forEach {
+            getChildOfWheelByIndex(endElementIndex).text = itemList[endIndex % itemList.size]
+            endIndex = getPreviousPositionFor(endIndex, itemList.size)
+            endElementIndex = getPreviousPositionFor(endElementIndex, maxElementsCount)
+        }
     }
 
 
