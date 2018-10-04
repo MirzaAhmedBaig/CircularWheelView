@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <declare-styleable name="CircularWheelPicker">
-        <attr name="position" format="enum">
+        <attr name="wheel_position" format="enum">
             <enum name="left" value="0" />
             <enum name="right" value="1" />
         </attr>
+        <attr name="wheel_item_text_size" format="dimension" />
+        <attr name="wheel_item_text_color" format="color" />
+        <attr name="wheel_item_selected_text_color" format="color" />
+        <attr name="wheel_background_color" format="color" />
     </declare-styleable>
 </resources>

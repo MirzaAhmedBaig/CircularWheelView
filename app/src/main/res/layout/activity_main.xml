@@ -15,7 +15,10 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/guideline"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:wheel_background_color="#00ffff"
+        app:wheel_item_selected_text_color="#0000ff"
+        app:wheel_item_text_color="#ff00ff" />
 
     <org.mab.wheelpicker.CircularWheelPicker
         android:id="@+id/circularWheelPicker_two"
@@ -26,7 +29,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@+id/guideline"
         app:layout_constraintTop_toTopOf="parent"
-        app:position="right" />
+        app:wheel_position="right" />
 
     <EditText
         android:id="@+id/position"
@@ -35,6 +38,7 @@
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="8dp"
+        android:fontFamily="sans-serif-condensed"
         android:gravity="center"
         android:inputType="number"
         android:text="0"

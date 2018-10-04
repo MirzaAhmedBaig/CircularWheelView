@@ -1,10 +1,9 @@
 package org.mab.wheelpicker
 
 import android.os.Bundle
-import android.support.constraint.ConstraintLayout
+import android.support.v4.content.res.ResourcesCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
-import dpToPx
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -14,6 +13,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setWheelPicker()
+
+        val f = ResourcesCompat.getFont(this, R.font.avenir_next_demi_bold)
+        left.typeface = f
     }
 
     private fun setWheelPicker() {
@@ -45,10 +47,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         left.setOnClickListener {
-            //            circularWheelPicker_one.setCurrentPosition(position.text.toString().toInt())
-            val param = right.layoutParams as ConstraintLayout.LayoutParams
-            param.width = dpToPx(position.text.toString().toInt())
-            right.layoutParams = param
+            circularWheelPicker_one.setCurrentPosition(position.text.toString().toInt())
         }
         right.setOnClickListener {
             circularWheelPicker_two.setCurrentPosition(position.text.toString().toInt())
