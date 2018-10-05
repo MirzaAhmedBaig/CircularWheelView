@@ -20,14 +20,13 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 
-class CircularWheelPicker : ConstraintLayout {
+class CircularWheelView : ConstraintLayout {
     companion object {
         const val LEFT = 0
         const val RIGHT = 1
     }
 
 
-    private val TAG = CircularWheelPicker::class.java.simpleName
     private var itemList = ArrayList<String>()
     private var ROTAION_ANGLE_OFFSET: Float = 0f
     private var currentPosition = 0
@@ -89,13 +88,13 @@ class CircularWheelPicker : ConstraintLayout {
     private fun getAttributedValues(attrs: AttributeSet) {
         val a = context.theme.obtainStyledAttributes(
                 attrs,
-                R.styleable.CircularWheelPicker,
+                R.styleable.CircularWheelView,
                 0, 0)
-        viewType = a.getInteger(R.styleable.CircularWheelPicker_wheel_position, LEFT)
-        textSize = a.getDimensionPixelSize(R.styleable.CircularWheelPicker_wheel_item_text_size, 20).toFloat()
-        normalColor = a.getColor(R.styleable.CircularWheelPicker_wheel_item_text_color, Color.GRAY)
-        selectionColor = a.getColor(R.styleable.CircularWheelPicker_wheel_item_selected_text_color, Color.WHITE)
-        wheelBackgroundColor = a.getColor(R.styleable.CircularWheelPicker_wheel_background_color, Color.WHITE)
+        viewType = a.getInteger(R.styleable.CircularWheelView_wheel_position, LEFT)
+        textSize = a.getDimensionPixelSize(R.styleable.CircularWheelView_wheel_item_text_size, 20).toFloat()
+        normalColor = a.getColor(R.styleable.CircularWheelView_wheel_item_text_color, Color.GRAY)
+        selectionColor = a.getColor(R.styleable.CircularWheelView_wheel_item_selected_text_color, Color.WHITE)
+        wheelBackgroundColor = a.getColor(R.styleable.CircularWheelView_wheel_background_color, Color.WHITE)
         a.recycle()
     }
 
@@ -136,11 +135,11 @@ class CircularWheelPicker : ConstraintLayout {
                     with(param) {
                         height = runTimeWidth
                         width = runTimeWidth
-                        if (this@CircularWheelPicker.measuredWidth > width / 2) {
+                        if (this@CircularWheelView.measuredWidth > width / 2) {
                             if (viewType == LEFT)
-                                marginEnd = (this@CircularWheelPicker.measuredWidth - width * 0.4).toInt()
+                                marginEnd = (this@CircularWheelView.measuredWidth - width * 0.4).toInt()
                             else
-                                marginStart = (this@CircularWheelPicker.measuredWidth - width * 0.4).toInt()
+                                marginStart = (this@CircularWheelView.measuredWidth - width * 0.4).toInt()
                         }
                     }
                     wheelLayout.layoutParams = param
@@ -194,8 +193,8 @@ class CircularWheelPicker : ConstraintLayout {
             val textView = TextView(context).apply {
                 id = View.generateViewId()
                 text = itemList[it]
-                textSize = this@CircularWheelPicker.textSize
-                typeface = this@CircularWheelPicker.typeface
+                textSize = this@CircularWheelView.textSize
+                typeface = this@CircularWheelView.typeface
                 setTextColor(normalColor)
                 layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     circleConstraint = dummyView.id
@@ -219,8 +218,8 @@ class CircularWheelPicker : ConstraintLayout {
             val textView = TextView(context).apply {
                 id = View.generateViewId()
                 text = itemList[it]
-                textSize = this@CircularWheelPicker.textSize
-                typeface = this@CircularWheelPicker.typeface
+                textSize = this@CircularWheelView.textSize
+                typeface = this@CircularWheelView.typeface
                 setTextColor(normalColor)
                 layoutParams = ConstraintLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                     circleConstraint = dummyView.id

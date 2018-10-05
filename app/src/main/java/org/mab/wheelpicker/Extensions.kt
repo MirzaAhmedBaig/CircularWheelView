@@ -1,11 +1,6 @@
-import android.content.res.Resources
 import android.view.View
 import android.view.animation.Animation
 import android.view.animation.ScaleAnimation
-
-internal fun dpToPx(dp: Int): Int {
-    return ((dp * Resources.getSystem().displayMetrics.density).toInt())
-}
 
 fun View.zoomIn(onAnimationStart: () -> Unit = {}, onAnimationEnd: () -> Unit = {}, duration: Long = 500, offset: Long = 0, fromScale: Float = 1f, toScale: Float = 1.5f) {
     val anim = ScaleAnimation(fromScale, toScale, fromScale, toScale, width / 2.0f, height / 2.0f)

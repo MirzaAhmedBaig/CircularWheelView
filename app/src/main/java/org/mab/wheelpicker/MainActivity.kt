@@ -24,7 +24,7 @@ class MainActivity : AppCompatActivity() {
             list.add("$it")
         }
         circularWheelPicker_one.setDataSet(list)
-        circularWheelPicker_one.setWheelItemSelectionListener(object : CircularWheelPicker.WheelItemSelectionListener {
+        circularWheelPicker_one.setWheelItemSelectionListener(object : CircularWheelView.WheelItemSelectionListener {
             override fun onItemSelected(index: Int) {
                 Log.d(TAG, "Selected position is : $index")
                 Log.d(TAG, "Get Current Item : ${circularWheelPicker_one.getCurrentItem()}")
@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         circularWheelPicker_two.setDataSet(list2)
-        circularWheelPicker_two.setWheelItemSelectionListener(object : CircularWheelPicker.WheelItemSelectionListener {
+        circularWheelPicker_two.setWheelItemSelectionListener(object : CircularWheelView.WheelItemSelectionListener {
             override fun onItemSelected(index: Int) {
                 Log.d(TAG, "Selected position is : $index")
                 Log.d(TAG, "Get Current Item : ${circularWheelPicker_two.getCurrentItem()}")

@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <org.mab.wheelpicker.CircularWheelPicker
+    <org.mab.wheelpicker.CircularWheelView
         android:id="@+id/circularWheelPicker_one"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -20,7 +20,7 @@
         app:wheel_item_selected_text_color="#0000ff"
         app:wheel_item_text_color="#ff00ff" />
 
-    <org.mab.wheelpicker.CircularWheelPicker
+    <org.mab.wheelpicker.CircularWheelView
         android:id="@+id/circularWheelPicker_two"
         android:layout_width="0dp"
         android:layout_height="0dp"
