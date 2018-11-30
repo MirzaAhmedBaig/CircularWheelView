@@ -6,6 +6,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.support.constraint.ConstraintLayout
 import android.util.AttributeSet
 import android.view.*
@@ -94,7 +95,7 @@ class CircularWheelView : ConstraintLayout {
         textSize = a.getDimensionPixelSize(R.styleable.CircularWheelView_wheel_item_text_size, 20).toFloat()
         normalColor = a.getColor(R.styleable.CircularWheelView_wheel_item_text_color, Color.GRAY)
         selectionColor = a.getColor(R.styleable.CircularWheelView_wheel_item_selected_text_color, Color.WHITE)
-        wheelBackgroundColor = a.getColor(R.styleable.CircularWheelView_wheel_background_color, Color.WHITE)
+        wheelBackgroundColor = a.getColor(R.styleable.CircularWheelView_wheel_background_color, Color.BLACK)
         a.recycle()
     }
 
@@ -110,6 +111,8 @@ class CircularWheelView : ConstraintLayout {
             topToTop = id
             if (viewType == RIGHT) startToStart = id else endToEnd = id
         }
+
+        setWheelBackground(wheelBackgroundColor)
         wheelLayout.layoutParams = params
         addView(wheelLayout)
     }
@@ -274,6 +277,7 @@ class CircularWheelView : ConstraintLayout {
 
     fun setWheelBackground(color: Int) {
         wheelBackgroundColor = color
+        (wheelLayout.background as GradientDrawable).setColor(wheelBackgroundColor)
     }
 
     fun setWheelItemSelectionListener(wheelItemSelectionListener: WheelItemSelectionListener) {
