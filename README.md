@@ -1,7 +1,8 @@
 # CircularWheelView
 Circular Wheel type list that can be used as item picker of string items.
  
- [ ![Download](https://api.bintray.com/packages/balusangem/maven/blurdrawerlayout/images/download.svg) ](https://bintray.com/balusangem/maven/blurdrawerlayout/_latestVersion)
+ [ ![Download](https://api.bintray.com/packages/mirzaahmedbaig/CircularWheelView/circularwheelview/images/download.svg) ](https://bintray.com/mirzaahmedbaig/CircularWheelView/circularwheelview/_latestVersion)
+ [![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-CircularWheelView-brightgreen.svg?style=flat)](https://android-arsenal.com/details/1/7174)
  
 ![Alt Text](https://github.com/MirzaAhmedBaig/CircularWheelView/blob/master/demo1.gif) 
 ![Alt Text](https://github.com/MirzaAhmedBaig/CircularWheelView/blob/master/demo2.gif)
